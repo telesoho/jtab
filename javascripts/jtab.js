@@ -6,6 +6,7 @@
  *   Jason Ong (https://github.com/jasonong)
  *   Bruno Bornsztein (https://github.com/bborn)
  *   Binary Bit LAN (https://github.com/binarybitlan)
+ *   Simon Lischka (https://github.com/simonlischka)
  * See:
  *   http://jtab.tardate.com : more information on availability, configuration and use.
  *   http://github.com/tardate/jtab/tree/master : source code repository, wiki, documentation
@@ -445,54 +446,46 @@ jtabChord.prototype.setCustomChordArray = function(){
 };
 
 jtabChord.prototype.parseCustomChordArrayFromToken = function() {
-  notes = this.fullChordName.replace(/(\%|\[.+\])/g, '');
-  pairs = notes.split('.');
+  let notes = this.fullChordName.replace(/(\%|\[.+\])/g, '');
+  let pairs = notes.split('.');
   if (pairs.length < 6){
     this.isValid = false;
     return;
   }
   this.isValid = true;
-
-  array = [];
+  /**`
+   * `chordArray` is an array of fret number / finger pairs like `[5, 1`]`
+   * (= fret number 5, played with first finger).
+   * 
+   * The first element of the array is different - it's an integer and describes the fret number
+   * right before the lowest fret played, which is where the chord diagram starts,
+   * like `4`.
+   * 
+   */ 
+  var chordArray = [];
   for (var i = 0; i < pairs.length; i++){
     pair = pairs[i].split('/')
     if (pair[0].match(/X/)){
       pair = [-1]
     }
-    array.push(pair)
+    chordArray.push(pair)
   }
 
-  // fingeredFrets = array.reject(function(p){
-  //   return p.length === 1
-  // }).collect(function(p){
-  //   return parseInt(p[0])
-  //   }).flatten().without(0,-1)
-
-  // `array` is an array of string/fretnumber pairs like [0,1].
-
-  fingeredFrets = _.where(array, function(pair) { return pair.length != 1});
-  fingeredFrets = _.map(fingeredFrets, function (pair) {
-    return parseInt(pair[0]);
+  let allFrets = _.map(chordArray, function(el) {
+    return el[0];
   });
 
-  fingeredFrets = _.map(fingeredFrets, function (pair) {
-    if ((i != 0) || (i != -1)){
-        return i;
-    } else {
-        return null;
-    }
+  let playedFrets = _.filter(allFrets, function(fret) {
+    let isOpenString = fret === 0;
+    let isMutedString = fret === -1;
+    return !isOpenString && !isMutedString;
   });
 
-  fingeredFrets = _.where(fingeredFrets, function(pair) { return pair;});
+  let lowestFretPlayed = _.min(playedFrets);
 
-  //find all the fret positions which arent X or 0. I'm sure there's a better way to do this.
+  chordArray.unshift(lowestFretPlayed - 1);
 
-  min = Math.min.apply( Math, fingeredFrets );
-
-  console.log(array);
-  array.unshift(min-1);
-  console.log(array);
-  return array;
+  return chordArray;
 };
 
 jtabChord.prototype.setChordArray = function(chordName) { // clones chord array (position 0) from chord ref data into this object
